@@ -262,7 +262,7 @@ def create_mutants_for_file(filename, output_path):
     source_file_mutation_data = SourceFileMutationData(path=filename)
     module_name = str(filename)[:-len(filename.suffix)].replace(os.sep, '.')
     source_file_mutation_data.exit_code_by_key = {
-         '.'.join([module_name, x]).replace('.__init__.', '.'): None
+         '.'.join([module_name, x]).replace('.__init__.', '.').replace("src.",""): None
         for x in mutant_names
     }
     source_file_mutation_data.hash_by_function_name = hash_by_function_name
@@ -1060,7 +1060,7 @@ def collect_source_file_mutation_data(*, mutant_names):
         source_file_mutation_data_by_path[str(path)] = m
 
     mutants = [
-        (m, mutant_name, result)
+        (m, mutant_name.replace("src.",""), result)
         for path, m in source_file_mutation_data_by_path.items()
         for mutant_name, result in m.exit_code_by_key.items()
     ]
