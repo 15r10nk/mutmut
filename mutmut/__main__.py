@@ -674,11 +674,9 @@ class ListAllTestsResult:
         }
 
     def clear_out_obsolete_test_names(self):
-        old_tests=dict(mutmut.tests_by_mangled_function_name)
-        mutmut.tests_by_mangled_function_name.clear()
-        mutmut.tests_by_mangled_function_name.update({
+        mutmut.tests_by_mangled_function_name=defaultdict(set,{
             k: {test_name for test_name in test_names if test_name not in self.ids}
-            for k, test_names in old_tests.items()
+            for k, test_names in mutmut.tests_by_mangled_function_name.items()
         })
         save_stats()
 
@@ -1209,6 +1207,7 @@ def run(mutant_names, *, max_children):
             print_stats(source_file_mutation_data_by_path)
 
             mutant_name = mutant_name.replace('__init__.', '')
+            mutant_name = mutant_name.replace('src.', '')
 
             # Rerun mutant if it's explicitly mentioned, but otherwise let the result stand
             if not mutant_names and result is not None:
