@@ -132,6 +132,8 @@ def guess_paths_to_mutate():
 
 
 def record_trampoline_hit(name):
+    if not hasattr(mutmut,"config"):
+        return
     if mutmut.config.max_stack_depth != -1:
         f = inspect.currentframe()
         c = mutmut.config.max_stack_depth
@@ -181,8 +183,9 @@ trampoline_impl = """
 from inspect import signature as _mutmut_signature
 
 def _mutmut_trampoline(orig, mutants, *args, **kwargs):
+    __tracebackhide__ = True 
     import os
-    mutant_under_test = os.environ['MUTANT_UNDER_TEST']
+    mutant_under_test = os.environ.get('MUTANT_UNDER_TEST',"")
     if mutant_under_test == 'fail':
         from mutmut.__main__ import MutmutProgrammaticFailException
         raise MutmutProgrammaticFailException('Failed programmatically')      
@@ -324,6 +327,7 @@ def build_trampoline(*, orig_name, mutants, class_name, is_generator):
 {mutants_dict}
 
 def {orig_name}({'self, ' if class_name is not None else ''}*args, **kwargs):
+    __tracebackhide__ = True 
     result = {yield_statement} {trampoline_name}({access_prefix}{mangled_name}__mutmut_orig{access_suffix}, {access_prefix}{mangled_name}__mutmut_mutants{access_suffix}, *args, **kwargs)
     return result 
 
@@ -683,6 +687,8 @@ class ListAllTestsResult:
 class PytestRunner(TestRunner):
     def execute_pytest(self, params, **kwargs):
         import pytest
+        params+=["--rootdir=.","--inline-snapshot=disable"]
+        print(">","pytest",*params,kwargs)
         exit_code = int(pytest.main(params, **kwargs))
         if exit_code == 4:
             raise BadTestExecutionCommandsException(params)
@@ -706,7 +712,7 @@ class PytestRunner(TestRunner):
 
     def run_tests(self, *, mutant_name, tests):
         with change_cwd('mutants'):
-            return int(self.execute_pytest(['-x', '-q', '--import-mode=append'] + list(tests)))
+            return int(self.execute_pytest(['-x', '--import-mode=append'] + list(tests)))
 
     def run_forced_fail(self):
         with change_cwd('mutants'):
@@ -980,12 +986,10 @@ def run_stats_collection(runner, tests=None):
 
     os.environ['MUTANT_UNDER_TEST'] = 'stats'
     os.environ['PY_IGNORE_IMPORTMISMATCH'] = '1'
-    with CatchOutput(show_spinner=True, spinner_title='running stats') as output_catcher:
-        collect_stats_exit_code = runner.run_stats(tests=tests)
-        if collect_stats_exit_code != 0:
-            output_catcher.dump_output()
-            print(f'failed to collect stats. runner returned {collect_stats_exit_code}')
-            exit(1)
+    collect_stats_exit_code = runner.run_stats(tests=tests)
+    if collect_stats_exit_code != 0:
+        print(f'failed to collect stats. runner returned {collect_stats_exit_code}')
+        exit(1)
 
     print('    done')
 
@@ -1160,6 +1164,12 @@ def run(mutant_names, *, max_children):
     os.environ['MUTANT_UNDER_TEST'] = ''
     with CatchOutput(show_spinner=True, spinner_title='running clean tests') as output_catcher:
         tests = tests_for_mutant_names(mutant_names)
+        #print(f"{mutants=}")
+        print(f"{mutant_names=}")
+        print(f"{tests=}")
+        if not tests:
+            tests=["tests"]
+        
 
         clean_test_exit_code = runner.run_tests(mutant_name=None, tests=tests)
         if clean_test_exit_code != 0:
