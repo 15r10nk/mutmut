@@ -674,10 +674,12 @@ class ListAllTestsResult:
         }
 
     def clear_out_obsolete_test_names(self):
-        mutmut.tests_by_mangled_function_name = {
+        old_tests=dict(mutmut.tests_by_mangled_function_name)
+        mutmut.tests_by_mangled_function_name.clear()
+        mutmut.tests_by_mangled_function_name.update({
             k: {test_name for test_name in test_names if test_name not in self.ids}
-            for k, test_names in mutmut.tests_by_mangled_function_name.items()
-        }
+            for k, test_names in old_tests.items()
+        })
         save_stats()
 
     def new_tests(self):
@@ -688,7 +690,7 @@ class PytestRunner(TestRunner):
     def execute_pytest(self, params, **kwargs):
         import pytest
         params+=["--rootdir=.","--inline-snapshot=disable"]
-        print(">","pytest",*params,kwargs)
+        #print(">","pytest",*params,kwargs)
         exit_code = int(pytest.main(params, **kwargs))
         if exit_code == 4:
             raise BadTestExecutionCommandsException(params)
