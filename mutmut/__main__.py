@@ -36,6 +36,8 @@ from textwrap import (
     dedent,
     indent,
 )
+import resource 
+
 from threading import Thread
 from typing import (
     Dict,
@@ -129,6 +131,10 @@ def guess_paths_to_mutate():
         'Could not figure out where the code to mutate is. '
         'Please specify it on the command line using --paths-to-mutate, '
         'or by adding "paths_to_mutate=code_dir" in setup.cfg to the [mutmut] section.')
+  
+def limit_memory(maxsize): 
+    soft, hard = resource.getrlimit(resource.RLIMIT_AS) 
+    resource.setrlimit(resource.RLIMIT_AS, (maxsize, hard))
 
 
 def record_trampoline_hit(name):
@@ -1226,6 +1232,7 @@ def run(mutant_names, *, max_children):
                 # In the child
                 os.environ['MUTANT_UNDER_TEST'] = mutant_name
                 setproctitle(f'mutmut: {mutant_name}')
+                limit_memory(1000*1000*500)
 
                 # Run fast tests first
                 tests = sorted(tests, key=lambda test_name: mutmut.duration_by_test[test_name])
