@@ -693,7 +693,7 @@ class ListAllTestsResult:
 class PytestRunner(TestRunner):
     def execute_pytest(self, params, **kwargs):
         import pytest
-        params+=["--rootdir=.","--inline-snapshot=disable"]
+        params+=["--rootdir=."]
         #print(">","pytest",*params,kwargs)
         exit_code = int(pytest.main(params, **kwargs))
         if exit_code == 4:
